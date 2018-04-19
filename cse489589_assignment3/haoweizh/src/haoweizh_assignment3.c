@@ -22,6 +22,8 @@
  * the connection manager.
  */
 
+#include <stdio.h>
+
 #include "../include/global.h"
 #include "../include/connection_manager.h"
 
