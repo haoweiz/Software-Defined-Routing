@@ -1,0 +1,5 @@
+scp -r * haoweizh@128.205.36.46://home/csgrad/haoweizh/cse489589_assignment3
+
+./grader_controller -c ./grader.cfg -d /home/csgrad/haoweizh/cse489589_assignment3/haoweizh/grader_staging -s /home/csgrad/haoweizh/cse489589_assignment3/haoweizh_pa3.tar -ctrl ../controller/controller -t author
+
+./grader_controller -c ./grader.cfg -d /home/os-class/cse489589_assignment3/haoweizh/grader_staging -s /home/os-class/cse489589_assignment3/haoweizh_pa3.tar -ctrl ../controller/controller -t author

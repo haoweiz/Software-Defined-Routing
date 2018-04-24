@@ -32,6 +32,8 @@
 #include "../include/network_util.h"
 #include "../include/control_header_lib.h"
 #include "../include/author.h"
+#include "../include/init_manager.h"
+#include "../include/router_manager.h"
 
 #ifndef PACKET_USING_STRUCT
     #define CNTRL_CONTROL_CODE_OFFSET 0x04
@@ -165,7 +167,24 @@ bool control_recv_hook(int sock_index)
     switch(control_code){
         case 0: author_response(sock_index);
                 break;
-
+        case 1: init_response(sock_index, cntrl_payload, payload_len);
+                break;
+        case 2: routing_table_response(sock_index);
+                break;
+        case 3: update_response(sock_index, cntrl_payload);
+                break;
+        case 4: crash_response(sock_index);
+                break;
+        case 5: /*sendfile_response()*/;
+                break;
+        case 6: /*sendfile_stats_response()*/;
+                break;
+        case 7: /*last_data_packet_response()*/;
+                break;
+        case 8: /*penultimate_data_packet_response()*/;
+                break;
+        default:
+                break;
         /* .......
         case 1: init_response(sock_index, cntrl_payload);
                 break;
