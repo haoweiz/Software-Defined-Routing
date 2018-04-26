@@ -33,7 +33,10 @@
 #include "../include/control_header_lib.h"
 #include "../include/author.h"
 #include "../include/init_manager.h"
-#include "../include/router_manager.h"
+#include "../include/routing_table_manager.h"
+#include "../include/update_manager.h"
+#include "../include/crash_manager.h"
+#include "../include/sendfile_manager.h"
 
 #ifndef PACKET_USING_STRUCT
     #define CNTRL_CONTROL_CODE_OFFSET 0x04
@@ -175,7 +178,7 @@ bool control_recv_hook(int sock_index)
                 break;
         case 4: crash_response(sock_index);
                 break;
-        case 5: /*sendfile_response()*/;
+        case 5: sendfile_response(sock_index, cntrl_payload, payload_len);
                 break;
         case 6: /*sendfile_stats_response()*/;
                 break;

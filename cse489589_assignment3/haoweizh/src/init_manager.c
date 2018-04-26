@@ -5,12 +5,65 @@
 #include <sys/select.h>
 
 #include "../include/init_manager.h"
-#include "../include/router_manager.h"
 #include "../include/data_manager.h"
 #include "../include/global.h"
 #include "../include/control_header_lib.h"
 #include "../include/connection_manager.h"
 #include "../include/network_util.h"
+
+
+int create_router_sock(){
+    int router_sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if(router_sock < 0)
+        ERROR("router_socket() failed");
+
+    struct sockaddr_in router_addr;
+    socklen_t addrlen = sizeof(router_addr);
+    bzero(&router_addr, sizeof(router_addr));
+    router_addr.sin_family = AF_INET;
+    router_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    struct router *r;
+    LIST_FOREACH(r,&router_list,next){
+        if(htons(r->cost) == 0)
+            router_addr.sin_port = htons(r->router_port);
+    }
+
+
+    if(bind(router_sock, (struct sockaddr *)&router_addr, sizeof(router_addr)) < 0)
+        ERROR("bind() failed");
+    return router_sock;
+}
+
+int create_data_sock(){
+    int data_sock = socket(AF_INET, SOCK_STREAM, 0);
+    if(data_sock < 0)
+        ERROR("socket() failed");
+
+    struct sockaddr_in data_addr;
+    socklen_t addrlen = sizeof(data_addr);
+
+    /* Make socket re-usable */
+    if(setsockopt(data_sock, SOL_SOCKET, SO_REUSEADDR, (int[]){1}, sizeof(int)) < 0)
+        ERROR("setsockopt() failed");
+
+    bzero(&data_addr, sizeof(data_addr));
+
+    data_addr.sin_family = AF_INET;
+    data_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    struct router *r;
+    LIST_FOREACH(r,&router_list,next){
+        if(htons(r->cost) == 0)
+            data_addr.sin_port = htons(r->data_port);
+    }
+
+    if(bind(data_sock, (struct sockaddr *)&data_addr, sizeof(data_addr)) < 0)
+        ERROR("bind() failed");
+
+    if(listen(data_sock, 5) < 0)
+        ERROR("listen() failed");
+
+    return data_sock;
+}
 
 /* Not finished! */
 void init_next_hop(){
@@ -24,6 +77,7 @@ void init_next_hop(){
         }
     }
 }
+
 
 
 void init_router_list(char *cntrl_payload, uint16_t offset, uint16_t payload_len){
@@ -57,9 +111,11 @@ void init_response(int sock_index, char *cntrl_payload, uint16_t payload_len){
     uint16_t updates_periodic_interval;
     uint16_t offset;
     memcpy(&number_of_routers, cntrl_payload+offset, sizeof(number_of_routers));
+    number_of_routers = ntohs(number_of_routers);
     offset += sizeof(number_of_routers);
     memcpy(&updates_periodic_interval, cntrl_payload+offset, sizeof(updates_periodic_interval));
     offset += sizeof(updates_periodic_interval);
+    updates_periodic_interval = ntohs(updates_periodic_interval);
 
     init_router_list(cntrl_payload, offset, payload_len);
 
@@ -67,7 +123,8 @@ void init_response(int sock_index, char *cntrl_payload, uint16_t payload_len){
     data_socket = create_data_sock();
     FD_SET(router_socket, &master_list);
     FD_SET(data_socket, &master_list);
-    head_fd = router_socket > data_socket ? router_socket : data_socket;
+    int hf = router_socket > data_socket ? router_socket : data_socket;
+    head_fd = head_fd > hf ? head_fd : hf;
 
     timeout.tv_sec = updates_periodic_interval;
     timeout.tv_usec = 0;
