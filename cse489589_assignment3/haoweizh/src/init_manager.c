@@ -5,12 +5,11 @@
 #include <sys/select.h>
 
 #include "../include/init_manager.h"
-#include "../include/data_manager.h"
 #include "../include/global.h"
 #include "../include/control_header_lib.h"
 #include "../include/connection_manager.h"
 #include "../include/network_util.h"
-
+#include "../include/time_manager.h"
 
 int create_router_sock(){
     int router_sock = socket(AF_INET, SOCK_DGRAM, 0);
@@ -28,6 +27,9 @@ int create_router_sock(){
             router_addr.sin_port = htons(r->router_port);
     }
 
+    int yes = 1;
+    if(setsockopt(router_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) < 0)
+        ERROR("setsockopt() failed");
 
     if(bind(router_sock, (struct sockaddr *)&router_addr, sizeof(router_addr)) < 0)
         ERROR("bind() failed");
@@ -62,6 +64,7 @@ int create_data_sock(){
     if(listen(data_sock, 5) < 0)
         ERROR("listen() failed");
 
+    LIST_INIT(&data_connection_list);
     return data_sock;
 }
 
@@ -71,9 +74,8 @@ void init_next_hop(){
     LIST_FOREACH(r,&router_list,next){
         if(ntohs(r->cost) == UINT16_MAX)
             r->next_hop = htons(UINT16_MAX);
-        else if(ntohs(r->cost) == 0)
-            r->next_hop = htons(0);
         else{
+            r->next_hop = r->id;
         }
     }
 }
@@ -108,7 +110,6 @@ void init_router_list(char *cntrl_payload, uint16_t offset, uint16_t payload_len
 
 
 void init_response(int sock_index, char *cntrl_payload, uint16_t payload_len){
-    uint16_t updates_periodic_interval;
     uint16_t offset;
     memcpy(&number_of_routers, cntrl_payload+offset, sizeof(number_of_routers));
     number_of_routers = ntohs(number_of_routers);
@@ -116,8 +117,15 @@ void init_response(int sock_index, char *cntrl_payload, uint16_t payload_len){
     memcpy(&updates_periodic_interval, cntrl_payload+offset, sizeof(updates_periodic_interval));
     offset += sizeof(updates_periodic_interval);
     updates_periodic_interval = ntohs(updates_periodic_interval);
+    timeout.tv_sec = updates_periodic_interval;
 
     init_router_list(cntrl_payload, offset, payload_len);
+    init_time();
+    struct router *r;
+    LIST_FOREACH(r,&router_list,next){
+        if(htons(r->cost) == 0)
+            myid = r->id;
+    }
 
     router_socket = create_router_sock();
     data_socket = create_data_sock();
@@ -125,9 +133,6 @@ void init_response(int sock_index, char *cntrl_payload, uint16_t payload_len){
     FD_SET(data_socket, &master_list);
     int hf = router_socket > data_socket ? router_socket : data_socket;
     head_fd = head_fd > hf ? head_fd : hf;
-
-    timeout.tv_sec = updates_periodic_interval;
-    timeout.tv_usec = 0;
 
     uint8_t control_code = 1;
     uint8_t response_code = 0;
