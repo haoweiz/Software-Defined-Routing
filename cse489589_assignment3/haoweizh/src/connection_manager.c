@@ -35,13 +35,13 @@
 fd_set watch_list, master_list;
 int head_fd;
 struct timeval timeout;
+bool isinit;
 
 void main_loop()
 {
     int selret, sock_index, fdaccept;
-
+    timeout.tv_sec = 1000000;
     while(TRUE){
-        timeout.tv_sec = 1000000;
         watch_list = master_list;
         selret = select(head_fd+1, &watch_list, NULL, NULL, &timeout);
 
@@ -66,6 +66,8 @@ void main_loop()
                     /* router_socket */
                     else if(sock_index == router_socket){
                         //call handler that will call recvfrom() .....
+                        if(isinit)
+                            update_time(RECEIVEVECTOR);
                         recv_update(router_socket);
                     }
 
@@ -92,20 +94,37 @@ void main_loop()
         
         if(selret == 0){
             /* Timeout */
-            //timeout.tv_sec = 1;
-            //struct router *r;
-            //LIST_FOREACH(r,&router_list,next){
-            //   if(htons(r->cost) != 0 && htons(r->cost) != UINT16_MAX)
-            //        send_vector(router_socket, r);
-            //}
-            printf("timeout!\n");
-            break;
+            update_time(TIMEOUT);
+            timeout = gettimeout();
+            struct time *t;
+            LIST_FOREACH(t,&time_list,next){
+                if(t->isconnect){
+                    if(t->miss == 3){
+                        printf("unconnect!\n");
+                        struct router *r;
+                        LIST_FOREACH(r,&router_list,next){
+                            if(t->router_id == ntohs(r->id))
+                                    r->cost = htons(UINT16_MAX);
+                        }
+                        t->isconnect = FALSE;
+                        t->miss = 0;
+                    }
+                    else{
+                        struct router *r;
+                        LIST_FOREACH(r,&router_list,next){
+                            if(t->router_id == ntohs(r->id))
+                                send_vector(router_socket, r);
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
 void init()
 {
+    isinit = FALSE;
     control_socket = create_control_sock();
 
     //router_socket and data_socket will be initialized after INIT from controller
