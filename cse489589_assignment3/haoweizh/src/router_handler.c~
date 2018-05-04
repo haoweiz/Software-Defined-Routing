@@ -81,7 +81,6 @@ void recv_update(int router_socket){
     LIST_FOREACH(updatecost,&router_list,next){
         updatecost->cost = htons(new_cost[indexofcost]);
         updatecost->next_hop = htons(new_next_hop[indexofcost]);
-        indexofcost++;
     }
     
     /*uint16_t *old_id = (uint16_t*)malloc(number_of_routers * sizeof(uint16_t));

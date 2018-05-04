@@ -1,0 +1,7 @@
+./grader_controller -c ./grader.cfg -d /home/csgrad/haoweizh/cse489589_assignment3/haoweizh/grader_staging -s ../haoweizh_pa3.tar -ctrl ../controller/controller -t rupdates
+
+scp * haoweizh@128.205.36.34://home/csgrad/haoweizh/cse489589_assignment3/haoweizh/src
+
+./controller -t example.topology -i 3
+
+netstat -tlnp|grep "port_number"

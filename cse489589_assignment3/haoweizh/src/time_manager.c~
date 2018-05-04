@@ -78,7 +78,6 @@ struct cause update_time(){
                 LIST_FOREACH(r,&router_list,next){
                     if(ntohs(r->id) == t->router_id)
                         r->connect = FALSE;
-                        r->cost = htons(UINT16_MAX);
                 }
                 c.router_id = t->router_id;
                 c.reason = EXPIRE;

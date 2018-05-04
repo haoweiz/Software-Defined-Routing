@@ -9,7 +9,7 @@ struct cause{
 };
 
 struct time{
-    bool isconnect;
+    int isconnect;
     uint16_t router_id;
     struct timeval begin_expire_time;
     struct timeval begin_send_time;

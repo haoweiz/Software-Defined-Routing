@@ -14,10 +14,9 @@ typedef enum {FALSE, TRUE} bool;
 /* https://scaryreasoner.wordpress.com/2009/02/28/checking-sizeof-at-compile-time/ */
 #define BUILD_BUG_ON(condition) ((void)sizeof(char[1 - 2*!!(condition)])) // Interesting stuff to read if you are interested to know how this works
 
-uint16_t myid;
+uint16_t this_router_id;
 uint16_t updates_periodic_interval;
 uint16_t number_of_routers;
-uint16_t updates_periodic_interval;
 uint16_t CONTROL_PORT;
 extern struct timeval timeout;
 extern int head_fd;
@@ -33,6 +32,7 @@ struct router{
     uint16_t cost;
     uint32_t ip;
     uint16_t next_hop;
+    bool connect;
     LIST_ENTRY(router) next;
 };
 

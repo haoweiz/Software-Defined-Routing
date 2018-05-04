@@ -98,8 +98,12 @@ void main_loop()
             if(c.reason == SEND){
                 struct router *r;
                 LIST_FOREACH(r,&router_list,next){
-                    if(ntohs(r->id) == c.router_id && r->connect == TRUE){
-                        send_vector(router_socket,r);
+                    if(ntohs(r->id) == c.router_id){
+                        struct time *temp;
+                        LIST_FOREACH(temp,&time_list,next){
+                            if(temp->router_id == c.router_id && temp->isconnect == TRUE)
+                                send_vector(router_socket,r);
+                        }
                     }
                 }
             }
