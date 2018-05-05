@@ -92,24 +92,9 @@ void main_loop()
         
         if(selret == 0){
             /* Timeout */
-            struct cause c = update_time();
+            update_time(router_socket);
             timeout = gettimeout();
-            printf("timeout.tv_sec = %ld, timeout.tv_usec = %ld\n",timeout.tv_sec,timeout.tv_usec);
-            if(c.reason == SEND){
-                struct router *r;
-                LIST_FOREACH(r,&router_list,next){
-                    if(ntohs(r->id) == c.router_id && r->connect == TRUE){
-                        send_vector(router_socket,r);
-                    }
-                }
-            }
-            if(c.reason == EXPIRE){
-                printf("EXPIRE APPEARS!\n");
-                struct router *temp;
-                LIST_FOREACH(temp,&router_list,next){
-                    printf("%d = %d|",ntohs(temp->id),ntohs(temp->cost));
-                } 
-            }
+            printf("Timeout:tv_sec = %ld,tv_usec = %ld\n",timeout.tv_sec,timeout.tv_usec);
         }
     }
 }

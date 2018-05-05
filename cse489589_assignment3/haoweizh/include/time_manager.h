@@ -3,10 +3,6 @@
 
 #define EXPIRE 1
 #define SEND 2
-struct cause{
-    uint16_t router_id;
-    int reason;
-};
 
 struct time{
     bool isconnect;
@@ -23,7 +19,7 @@ LIST_HEAD(time_head,time) time_list;
 void init_time();
 struct timeval getdifftime(struct timeval begin, struct timeval end);
 struct timeval gettotaltime(struct timeval base,struct timeval interval);
-struct cause update_time();
+void update_time();
 struct timeval gettimeout();
 
 #endif

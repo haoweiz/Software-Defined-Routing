@@ -4,6 +4,7 @@
 
 #include "../include/global.h"
 #include "../include/time_manager.h"
+#include "../include/router_handler.h"
 
 void init_time(){
     LIST_INIT(&time_list);
@@ -16,11 +17,11 @@ void init_time(){
         t->send_time.tv_usec = 0;
         t->expire_time.tv_sec = 3 * updates_periodic_interval;
         t->expire_time.tv_usec = 0;
+
         struct router *r;
         LIST_FOREACH(r,&router_list,next){
-            if(ntohs(r->id) == i){
-                t->isconnect = r->connect;
-            }
+            if(ntohs(r->id) == i && r->connect == TRUE)
+                t->isconnect = TRUE;
         }
         LIST_INSERT_HEAD(&time_list, t, next);
     }
@@ -50,10 +51,7 @@ struct timeval gettotaltime(struct timeval base,struct timeval interval){
     return total;
 }
 
-struct cause update_time(){
-    struct cause c;
-    c.router_id = 0;
-    c.reason = 0;
+void update_time(int router_socket){
     struct timeval current;
     gettimeofday(&current,NULL);
     struct timeval expire;
@@ -76,24 +74,25 @@ struct cause update_time(){
                 t->isconnect = FALSE;
                 struct router *r;
                 LIST_FOREACH(r,&router_list,next){
-                    if(ntohs(r->id) == t->router_id)
+                    if(ntohs(r->id) == t->router_id){
                         r->connect = FALSE;
                         r->cost = htons(UINT16_MAX);
+                    }
                 }
-                c.router_id = t->router_id;
-                c.reason = EXPIRE;
             }
             if(diff_send.tv_sec < 0 || diff_send.tv_usec < 0){
                 printf("Send timeout,router id = %d\n",t->router_id);
                 t->begin_send_time = gettotaltime(t->begin_send_time,send);
                 t->send_time.tv_sec = updates_periodic_interval;
                 t->send_time.tv_usec = 0;
-                c.router_id = t->router_id;
-                c.reason = SEND;
+                struct router *r;
+                LIST_FOREACH(r,&router_list,next){
+                    if(ntohs(r->id) == t->router_id && r->connect == TRUE)
+                        send_vector(router_socket,r);
+                }
             }
         }
     }
-    return c;
 }
 
 struct timeval gettimeout(){

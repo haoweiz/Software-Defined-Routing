@@ -11,6 +11,8 @@
 #include "../include/network_util.h"
 #include "../include/time_manager.h"
 
+uint16_t **distance_vector;
+
 int create_router_sock(){
     int router_sock = socket(AF_INET, SOCK_DGRAM, 0);
     if(router_sock < 0)
@@ -21,11 +23,7 @@ int create_router_sock(){
     bzero(&router_addr, sizeof(router_addr));
     router_addr.sin_family = AF_INET;
     router_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    struct router *r;
-    LIST_FOREACH(r,&router_list,next){
-        if(htons(r->cost) == 0)
-            router_addr.sin_port = r->router_port;
-    }
+    router_addr.sin_port = this_router_port;
 
     int yes = 1;
     if(setsockopt(router_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) < 0)
@@ -52,11 +50,7 @@ int create_data_sock(){
 
     data_addr.sin_family = AF_INET;
     data_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    struct router *r;
-    LIST_FOREACH(r,&router_list,next){
-        if(htons(r->cost) == 0)
-            data_addr.sin_port = r->data_port;
-    }
+    data_addr.sin_port = this_data_port;
 
     if(bind(data_sock, (struct sockaddr *)&data_addr, sizeof(data_addr)) < 0)
         ERROR("bind() failed");
@@ -68,79 +62,109 @@ int create_data_sock(){
     return data_sock;
 }
 
-/* Not finished! */
-void init_next_hop(){
-    struct router *r;
-    LIST_FOREACH(r,&router_list,next){
-        if(ntohs(r->cost) == UINT16_MAX)
-            r->next_hop = htons(UINT16_MAX);
-        else{
-            r->next_hop = r->id;
-        }
-    }
-}
 
-void init_connect_info(){
-    struct router *r;
-    LIST_FOREACH(r,&router_list,next){
-        if(ntohs(r->cost) != UINT16_MAX && ntohs(r->cost) != 0)
-            r->connect = TRUE;
-        else{
-            r->connect = FALSE;
-        }
-    }
-}
-
-void init_this_router_id(){
-    struct router *r;
-    LIST_FOREACH(r,&router_list,next){
-        if(ntohs(r->cost) == 0)
-            this_router_id = ntohs(r->id);
-    }
-}
-
+/* Init router list and distance vector */
 void init_router_list(char *cntrl_payload, uint16_t offset, uint16_t payload_len){
+    uint16_t *id = (uint16_t*)malloc(sizeof(uint16_t)*number_of_routers);
+    uint16_t *cost = (uint16_t*)malloc(sizeof(uint16_t)*number_of_routers);
     LIST_INIT(&router_list);
-    while(offset < payload_len){
+    for(int index = 0;index < number_of_routers;++index){
         struct router *r = (struct router*)malloc(sizeof(struct router));
 
         memcpy(&r->id, cntrl_payload + offset, sizeof(r->id));
-        offset += sizeof(r->id);
+        memcpy(&id[index],cntrl_payload + offset, sizeof(uint16_t));
+        offset += sizeof(uint16_t);
 
         memcpy(&r->router_port, cntrl_payload + offset, sizeof(r->router_port));
-        offset += sizeof(r->router_port);
+        offset += sizeof(uint16_t);
 
         memcpy(&r->data_port, cntrl_payload + offset, sizeof(r->data_port));
-        offset += sizeof(r->data_port);
+        offset += sizeof(uint16_t);
 
-        memcpy(&r->cost, cntrl_payload + offset, sizeof(r->cost));
-        offset += sizeof(r->cost);
+        memcpy(&r->cost, cntrl_payload + offset, sizeof(uint16_t));
+        memcpy(&cost[index],cntrl_payload + offset, sizeof(uint16_t));
+        offset += sizeof(uint16_t);
+        if(ntohs(cost[index]) == UINT16_MAX){
+            r->next_hop = htons(UINT16_MAX);
+            r->connect = FALSE;
+        }
+        else if(ntohs(cost[index]) == 0){
+            r->next_hop = r->id;
+            r->connect = FALSE;
+        }
+        else{
+            r->next_hop = r->id;
+            r->connect = TRUE;
+        }
 
         memcpy(&r->ip, cntrl_payload + offset, sizeof(r->ip));
-        offset += sizeof(r->ip);
+        offset += sizeof(uint32_t);
 
         LIST_INSERT_HEAD(&router_list, r, next);
     }
-    init_next_hop();
-    init_connect_info();
-    init_this_router_id();
+
+    /* Set this router id, store as host */
+    for(int i = 0;i != number_of_routers;++i){
+        if(ntohs(cost[i]) == 0)
+            this_router_id = ntohs(id[i]);
+    }
+    
+    /* Init distance vector, store as host */
+    for(int i = 0;i != number_of_routers;++i){
+        for(int j = 0;j != number_of_routers;++j){
+            if(ntohs(id[j]) == i+1){
+                distance_vector[this_router_id-1][i] = ntohs(cost[j]);
+                break;
+            }
+        }
+    }
+    free(id);
+    free(cost);
+}
+
+/* Set all element of distanve vector to UINT16_MAX */
+void init_distance_vector(){
+    distance_vector = (uint16_t**)malloc(number_of_routers*number_of_routers*sizeof(uint16_t*));
+    for(int i = 0;i != number_of_routers;++i){
+        distance_vector[i] = (uint16_t*)malloc(number_of_routers*sizeof(uint16_t));
+        for(int j = 0;j != number_of_routers;++j)
+            distance_vector[i][j] = UINT16_MAX;
+    }
+}
+
+/* Init this_router_ip, this router_port, this_data_port */
+void init_this_ip_port(){
+    struct router *r;
+    LIST_FOREACH(r,&router_list,next){
+        if(ntohs(r->id) == this_router_id){
+            this_router_port = r->router_port;
+            this_data_port = r->data_port;
+            this_router_ip = r->ip;
+        }
+    }
 }
 
 
-
+/* Init_response */
 void init_response(int sock_index, char *cntrl_payload, uint16_t payload_len){
+    /* Init number_of_routers, in this project is 5, store as host */
     isinit = TRUE;
-    uint16_t offset;
+    uint16_t offset = 0;
     memcpy(&number_of_routers, cntrl_payload+offset, sizeof(number_of_routers));
     number_of_routers = ntohs(number_of_routers);
     offset += sizeof(number_of_routers);
+    
+    /* Init update interval, store as host */
     memcpy(&updates_periodic_interval, cntrl_payload+offset, sizeof(updates_periodic_interval));
     offset += sizeof(updates_periodic_interval);
     updates_periodic_interval = ntohs(updates_periodic_interval);
+
     timeout.tv_sec = 0;
     timeout.tv_usec = 0;
 
+    init_distance_vector();
     init_router_list(cntrl_payload, offset, payload_len);
+    init_this_ip_port();
     init_time();
 
     router_socket = create_router_sock();

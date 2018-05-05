@@ -1,4 +1,5 @@
 #include <string.h>
+#include <netinet/in.h>
 
 #include "../include/global.h"
 #include "../include/update_manager.h"
@@ -11,12 +12,7 @@ void update_response(int sock_index, char *cntrl_payload){
     uint16_t offset = 2;
     memcpy(&id, cntrl_payload, sizeof(uint16_t));
     memcpy(&cost, cntrl_payload + offset, sizeof(uint16_t));
-    struct router *r;
-    LIST_FOREACH(r,&router_list,next){
-        if(r->id == id)
-            r->cost = cost;
-    }
-
+    distance_vector[this_router_id-1][ntohs(id)-1] = ntohs(cost);
     uint8_t control_code = 3;
     uint8_t response_code = 0;
     uint16_t payload_length = 0;
