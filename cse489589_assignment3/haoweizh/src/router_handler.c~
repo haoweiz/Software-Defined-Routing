@@ -95,18 +95,15 @@ void recv_update(int router_socket){
                 continue;
             }
 
-            bool flag = FALSE;
             struct time *t;
             LIST_FOREACH(t,&time_list,next){
                 if(t->index == j){
                     if(t->isconnect == FALSE){
                         printf("error.\n");
-                        flag = TRUE;
+                        continue;
                     }
                 }
             }
-            if(flag == TRUE)
-                continue;
 
             uint16_t origcost = newcost;
             newcost = min((int)newcost,(int)distance_vector[this_router_id][j]+(int)distance_vector[j][i]);

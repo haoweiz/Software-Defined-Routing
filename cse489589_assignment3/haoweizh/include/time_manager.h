@@ -6,7 +6,8 @@
 
 struct time{
     bool isconnect;
-    uint16_t router_id;
+    int index;
+    uint32_t router_ip_addr;
     struct timeval begin_expire_time;
     struct timeval begin_send_time;
     struct timeval expire_time;

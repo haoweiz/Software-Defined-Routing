@@ -52,6 +52,5 @@ LIST_HEAD(data_connection_head,data_connection) data_connection_list;
 LIST_HEAD(router_head,router) router_list;
 
 void printrt();
-void printnh();
 
 #endif

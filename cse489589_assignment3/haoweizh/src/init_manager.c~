@@ -85,7 +85,7 @@ void init_router_list(char *cntrl_payload, uint16_t offset, uint16_t payload_len
         offset += sizeof(uint16_t);
         if(ntohs(cost[index]) == UINT16_MAX){
             r->next_hop = htons(UINT16_MAX);
-            r->connect = FALSE;
+            r->connect = TRUE;
         }
         else if(ntohs(cost[index]) == 0){
             r->next_hop = r->id;

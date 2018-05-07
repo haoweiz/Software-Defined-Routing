@@ -16,6 +16,5 @@ void crash_response(int sock_index){
     memcpy(crash_response,crash_header,CNTRL_RESP_HEADER_SIZE);
     sendALL(sock_index, crash_response, CNTRL_RESP_HEADER_SIZE + payload_length);
     free(crash_response);
-    close(router_socket);
-    close(data_socket);
+    close();
 }

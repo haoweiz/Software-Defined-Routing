@@ -27,6 +27,7 @@ void routing_table_response(int sock_index){
         memcpy(routing_table_response + CNTRL_RESP_HEADER_SIZE + offset, &r->next_hop, sizeof(uint16_t));
         offset = offset + 2;
 
+        /* This sentence has problem!!!! this_router_id is uint16_t and cannot directly cast to int. */
         uint16_t cost = htons(distance_vector[this_router_id][r->index]);  
         memcpy(routing_table_response + CNTRL_RESP_HEADER_SIZE + offset, &cost, sizeof(uint16_t));
         offset = offset + 2;

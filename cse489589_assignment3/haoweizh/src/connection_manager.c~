@@ -66,7 +66,7 @@ void main_loop()
                     /* router_socket */
                     else if(sock_index == router_socket){
                         //call handler that will call recvfrom() .....
-                        recv_update(router_socket);
+                        //recv_update(router_socket);
                     }
 
                     /* data_socket */
@@ -90,11 +90,11 @@ void main_loop()
             }
         }
         
-        if(selret == 0){
+        /*if(selret == 0){
             update_time(router_socket);
             timeout = gettimeout();
             printf("Timeout:tv_sec = %ld,tv_usec = %ld\n",timeout.tv_sec,timeout.tv_usec);
-        }
+        }*/
     }
 }
 

@@ -71,7 +71,7 @@ void update_time(int router_socket){
                 t->isconnect = FALSE;
                 struct router *r;
                 LIST_FOREACH(r,&router_list,next){
-                    if(r->index == t->index){
+                    if(r->ip == t->router_ip_addr){
                         r->connect = FALSE;
                         r->cost = htons(UINT16_MAX);
                     }
