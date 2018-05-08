@@ -37,6 +37,9 @@
 #include "../include/update_manager.h"
 #include "../include/crash_manager.h"
 #include "../include/sendfile_manager.h"
+#include "../include/sendfile_stats_manager.h"
+#include "../include/last_data_packet_manager.h"
+#include "../include/penultimate_data_packet_manager.h"
 
 #ifndef PACKET_USING_STRUCT
     #define CNTRL_CONTROL_CODE_OFFSET 0x04
@@ -180,11 +183,11 @@ bool control_recv_hook(int sock_index)
                 break;
         case 5: sendfile_response(sock_index, cntrl_payload, payload_len);
                 break;
-        case 6: /*sendfile_stats_response()*/;
+        case 6: sendfile_stats_response(sock_index, cntrl_payload, payload_len);
                 break;
-        case 7: /*last_data_packet_response()*/;
+        case 7: last_data_packet_response(sock_index);
                 break;
-        case 8: /*penultimate_data_packet_response()*/;
+        case 8: penultimate_data_packet_response(sock_index);
                 break;
         default:
                 break;

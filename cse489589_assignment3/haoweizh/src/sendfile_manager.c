@@ -9,6 +9,7 @@
 #include "../include/network_util.h"
 
 
+/* After receiving sendfile_response, connect to destination. */
 void connect_destinate(uint32_t des_ip){
     struct router *r;
     uint16_t next_hop;
@@ -24,7 +25,7 @@ void connect_destinate(uint32_t des_ip){
         }
     }
 
-    int connect_socket = socket(AF_INET, SOCK_STREAM, 0);
+    connect_socket = socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in des_addr; 
     bzero(&des_addr,sizeof(des_addr));
     des_addr.sin_family = AF_INET;
@@ -52,6 +53,7 @@ char *create_packet_header(uint32_t des_ip,uint8_t transfer_id,uint8_t ttl,uint1
 
 }
 
+
 void sendfile_response(int sock_index, char *cntrl_payload, uint16_t payload_len){
     uint32_t des_ip;
     uint8_t ttl;
@@ -71,7 +73,44 @@ void sendfile_response(int sock_index, char *cntrl_payload, uint16_t payload_len
     memcpy(file_name, cntrl_payload + offset, payload_len-8);
 
     connect_destinate(des_ip);
-    FILE *file = fopen(file_name,"r");
+
+    uint16_t next_hop;
+    uint32_t next_hop_ip;
+    struct router *r;
+    LIST_FOREACH(r,&router_list,next){
+        if(r->ip == des_ip){
+            next_hop = r->next_hop;
+        }
+    }
+    LIST_FOREACH(r,&router_list,next){
+        if(r->id == next_hop){
+            next_hop_ip = r->ip;
+        }
+    }
+    /* Send file here */
+    FILE *stream = fopen(file_name,"r");
+    fseek(stream, 0L, SEEK_END);
+    int sz = ftell(stream);
+    int count = 0;
+    while(count * PAYLOAD_LEN < sz){
+        char *payload = (char*)malloc(PAYLOAD_LEN);
+        fseek(stream,count * PAYLOAD_LEN,SEEK_SET);
+        fgets(payload,PAYLOAD_LEN,stream);
+        char *header;
+        if((count+1) * PAYLOAD_LEN >= sz){
+            header = create_packet_header(des_ip,transfer_id,ttl,seqnum,FIN_ZERO);
+        }
+        else{
+            header = create_packet_header(des_ip,transfer_id,ttl,seqnum,FIN_ONE);
+        }
+        char *data_packet = (char*)malloc(DATA_PACKET_HEADER_OFFSET + PAYLOAD_LEN);
+        memcpy(data_packet,header,DATA_PACKET_HEADER_OFFSET);
+        memcpy(data_packet + DATA_PACKET_HEADER_OFFSET,payload,PAYLOAD_LEN);
+        sendALL(connect_socket,data_packet,DATA_PACKET_HEADER_OFFSET + PAYLOAD_LEN);
+        free(payload);
+        free(data_packet);
+        count++;
+    }
 
     uint8_t control_code = 5;
     uint8_t response_code = 0;

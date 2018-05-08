@@ -31,11 +31,13 @@
 #include "../include/router_handler.h"
 #include "../include/data_handler.h"
 #include "../include/time_manager.h"
+#include "../include/sendfile_manager.h"
 
 fd_set watch_list, master_list;
 int head_fd;
 struct timeval timeout;
-bool isinit;
+char *last_data_packet;
+char *panultimate_data_packet;
 
 void main_loop()
 {
@@ -103,7 +105,6 @@ void main_loop()
 
 void init()
 {
-    isinit = FALSE;
     control_socket = create_control_sock();
 
     //router_socket and data_socket will be initialized after INIT from controller
@@ -115,5 +116,7 @@ void init()
     FD_SET(control_socket, &master_list);
     head_fd = control_socket;
 
+    last_data_packet = (char*)malloc(PAYLOAD_LEN + DATA_PACKET_HEADER_OFFSET);
+    panultimate_data_packet = (char*)malloc(PAYLOAD_LEN + DATA_PACKET_HEADER_OFFSET);
     main_loop();
 }

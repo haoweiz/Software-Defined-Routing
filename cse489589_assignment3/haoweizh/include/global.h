@@ -27,6 +27,8 @@ extern struct timeval timeout;
 extern int head_fd;
 extern fd_set master_list;
 extern fd_set watch_list;
+extern char *last_data_packet;
+extern char *panultimate_data_packet;
 
 
 /* Store as network byte order. */

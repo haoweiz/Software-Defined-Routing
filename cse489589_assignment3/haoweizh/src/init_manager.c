@@ -146,15 +146,18 @@ void init_response(int sock_index, char *cntrl_payload, uint16_t payload_len){
     offset += sizeof(updates_periodic_interval);
     updates_periodic_interval = ntohs(updates_periodic_interval);
 
+    /* Init timeout */
     timeout.tv_sec = 0;
     timeout.tv_usec = 0;
 
+    /* Init related varilables */
     init_distance_vector();
     init_router_list(cntrl_payload, offset, payload_len);
     init_this_ip_port();
     init_time();
     LIST_INIT(&data_list);
 
+    /* Create data and router socket */
     router_socket = create_router_sock();
     data_socket = create_data_sock();
     FD_SET(router_socket, &master_list);
@@ -162,6 +165,7 @@ void init_response(int sock_index, char *cntrl_payload, uint16_t payload_len){
     int hf = router_socket > data_socket ? router_socket : data_socket;
     head_fd = head_fd > hf ? head_fd : hf;
 
+    /* Send response command */
     uint8_t control_code = 1;
     uint8_t response_code = 0;
     uint16_t payload_length = 0;
