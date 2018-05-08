@@ -1,6 +1,7 @@
 #include <string.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #include "../include/global.h"
 #include "../include/sendfile_manager.h"
@@ -35,6 +36,21 @@ void connect_destinate(uint32_t des_ip){
     }
 }
 
+char *create_packet_header(uint32_t des_ip,uint8_t transfer_id,uint8_t ttl,uint16_t seqnum,uint32_t fin){
+    char *buffer = malloc(DATA_PACKET_HEADER_OFFSET);
+    uint16_t offset = 0;
+    memcpy(buffer+offset,&des_ip,sizeof(des_ip));
+    offset = offset + sizeof(uint32_t);
+    memcpy(buffer+offset,&transfer_id,sizeof(uint8_t));
+    offset = offset + sizeof(uint8_t);
+    memcpy(buffer+offset,&ttl,sizeof(uint8_t));
+    offset = offset + sizeof(uint8_t);
+    memcpy(buffer+offset,&seqnum,sizeof(uint16_t));
+    offset = offset + sizeof(uint16_t);
+    memcpy(buffer+offset,&fin,sizeof(uint32_t));
+    return buffer;
+
+}
 
 void sendfile_response(int sock_index, char *cntrl_payload, uint16_t payload_len){
     uint32_t des_ip;
@@ -42,30 +58,28 @@ void sendfile_response(int sock_index, char *cntrl_payload, uint16_t payload_len
     uint8_t transfer_id;
     uint16_t seqnum;
     uint8_t offset = 0;
-    char *file_name;
+    char *file_name = (char*)malloc(payload_len-DATA_PACKET_HEADER_OFFSET);
 
-    memcpy(&des_ip, cntrl_payload + offset, sizeof(des_ip));
-    offset += sizeof(des_ip);
-
-    memcpy(&ttl, cntrl_payload + offset, sizeof(ttl));
-    offset += sizeof(ttl);
-
-    memcpy(&transfer_id, cntrl_payload + offset, sizeof(transfer_id));
-    offset += sizeof(transfer_id);
-
-    memcpy(&seqnum, cntrl_payload + offset, sizeof(seqnum));
-    offset += sizeof(seqnum);
-
-    memcpy(file_name, cntrl_payload + offset, payload_len - offset + 1);
+    memcpy(&des_ip, cntrl_payload + offset, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+    memcpy(&ttl, cntrl_payload + offset, sizeof(uint8_t));
+    offset += sizeof(uint8_t);
+    memcpy(&transfer_id, cntrl_payload + offset, sizeof(uint8_t));
+    offset += sizeof(uint8_t);
+    memcpy(&seqnum, cntrl_payload + offset, sizeof(uint16_t));
+    offset += sizeof(uint16_t);
+    memcpy(file_name, cntrl_payload + offset, payload_len-8);
 
     connect_destinate(des_ip);
+    FILE *file = fopen(file_name,"r");
 
     uint8_t control_code = 5;
     uint8_t response_code = 0;
-    uint16_t payload_length = 0;  //unfinished!
+    uint16_t payload_length = 0;  
     char *sendfile_response = (char*) malloc(CNTRL_RESP_HEADER_SIZE + payload_length);
     char *sendfile_header = create_response_header(sock_index, control_code, response_code, payload_length);
     memcpy(sendfile_response,sendfile_header,CNTRL_RESP_HEADER_SIZE);
     sendALL(sock_index, sendfile_response, CNTRL_RESP_HEADER_SIZE + payload_length);
     free(sendfile_response);
+    free(file_name);
 }

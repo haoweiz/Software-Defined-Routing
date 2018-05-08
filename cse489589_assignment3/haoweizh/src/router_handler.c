@@ -109,7 +109,14 @@ void recv_update(int router_socket){
                 continue;
 
             uint16_t origcost = newcost;
-            newcost = min((int)newcost,(int)distance_vector[this_router_id][j]+(int)distance_vector[j][i]);
+            uint16_t prevcost;
+            struct router *temp_router;
+            LIST_FOREACH(temp_router,&router_list,next){
+                if(temp_router->index == j)
+                    prevcost = ntohs(temp_router->cost);
+            }
+
+            newcost = min((int)newcost,prevcost+(int)distance_vector[j][i]);
             if(origcost != newcost){
                 struct router *r2;
                 LIST_FOREACH(r2,&router_list,next){

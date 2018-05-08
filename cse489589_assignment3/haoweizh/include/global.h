@@ -42,16 +42,18 @@ struct router{
     LIST_ENTRY(router) next;
 };
 
-
-struct data_connection{
-    uint32_t fd;
-    LIST_ENTRY(data_connection) next;
+struct DataConn
+{
+    int sockfd;
+    LIST_ENTRY(DataConn) next;
 };
 
-LIST_HEAD(data_connection_head,data_connection) data_connection_list;
+LIST_HEAD(DataConnHead, DataConn) data_list;
 LIST_HEAD(router_head,router) router_list;
 
 void printrt();
 void printnh();
+void printtimecon();
+void printroutercon();
 
 #endif

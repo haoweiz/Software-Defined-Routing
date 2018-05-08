@@ -56,7 +56,6 @@ int create_data_sock(){
     if(listen(data_sock, number_of_routers) < 0)
         ERROR("listen() failed");
 
-    LIST_INIT(&data_connection_list);
     return data_sock;
 }
 
@@ -154,6 +153,7 @@ void init_response(int sock_index, char *cntrl_payload, uint16_t payload_len){
     init_router_list(cntrl_payload, offset, payload_len);
     init_this_ip_port();
     init_time();
+    LIST_INIT(&data_list);
 
     router_socket = create_router_sock();
     data_socket = create_data_sock();

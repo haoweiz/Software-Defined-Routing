@@ -72,9 +72,9 @@ void main_loop()
                     /* data_socket */
                     else if(sock_index == data_socket){
                         //new_data_conn(sock_index);
-                        //int newfd = new_data_conn(data_socket);
-                        //head_fd = newfd > head_fd ? newfd : head_fd;
-                        //FD_SET(newfd, &master_list);
+                        int newfd = new_data_conn(data_socket);
+                        head_fd = newfd > head_fd ? newfd : head_fd;
+                        FD_SET(newfd, &master_list);
                     }
 
                     /* Existing connection */
@@ -83,7 +83,10 @@ void main_loop()
                             if(!control_recv_hook(sock_index)) 
                                 FD_CLR(sock_index, &master_list);
                         }
-                        //else if isData(sock_index);
+                        else if(isData(sock_index)){
+                            if(!data_recv_file(sock_index))
+                                FD_CLR(sock_index, &master_list);
+                        }
                         else ERROR("Unknown socket index");
                     }
                 }

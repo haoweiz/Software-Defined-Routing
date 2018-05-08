@@ -58,6 +58,8 @@ void update_time(int router_socket){
     send.tv_sec = updates_periodic_interval;
     send.tv_usec = 0;
     struct time *t;
+    printtimecon();
+    printroutercon();
     LIST_FOREACH(t,&time_list,next){
         if(t->isconnect == TRUE){
             struct timeval diff_expire = getdifftime(current,gettotaltime(t->begin_expire_time,expire));
