@@ -156,6 +156,7 @@ void init_response(int sock_index, char *cntrl_payload, uint16_t payload_len){
     init_this_ip_port();
     init_time();
     LIST_INIT(&data_list);
+    LIST_INIT(&sendfile_stats_list);
 
     /* Create data and router socket */
     router_socket = create_router_sock();
