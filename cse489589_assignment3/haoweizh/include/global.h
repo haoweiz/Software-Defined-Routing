@@ -50,16 +50,14 @@ struct DataConn
     LIST_ENTRY(DataConn) next;
 };
 
-struct sendfile_stats{
-    uint8_t transfer_id;            //N
-    uint8_t ttl;                    //N
-    uint16_t number;                //H
-    uint16_t seqnum[10240];         //N
-    char *buffer;
-    LIST_ENTRY(sendfile_stats) next;
-};
 
-LIST_HEAD(sendfile_stats_head, sendfile_stats) sendfile_stats_list;
+uint8_t global_transfer_id;       //H and N       
+uint8_t global_ttl;               //H and N           
+uint16_t init_seqnum;             //H
+uint16_t last_seqnum;             //H
+char *buffer;
+bool send_finish;
+
 LIST_HEAD(DataConnHead, DataConn) data_list;
 LIST_HEAD(router_head, router) router_list;
 

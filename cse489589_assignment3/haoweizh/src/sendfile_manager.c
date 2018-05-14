@@ -32,27 +32,6 @@ int connect_destinate(uint32_t des_ip){
     return connect_socket;
 }
 
-char *create_packet_header(uint32_t des_ip,uint8_t transfer_id,uint8_t ttl,uint16_t seqnum,uint8_t fin){
-    char *buffer = (char*)malloc(DATA_PACKET_HEADER_OFFSET);
-    uint16_t offset = 0;
-    memcpy(buffer+offset,&des_ip,sizeof(uint32_t));
-    offset = offset + sizeof(uint32_t);
-    memcpy(buffer+offset,&transfer_id,sizeof(uint8_t));
-    offset = offset + sizeof(uint8_t);
-    memcpy(buffer+offset,&ttl,sizeof(uint8_t));
-    offset = offset + sizeof(uint8_t);
-    memcpy(buffer+offset,&seqnum,sizeof(uint16_t));
-    offset = offset + sizeof(uint16_t);
-    memcpy(buffer+offset,&fin,sizeof(uint8_t));
-    offset = offset + sizeof(uint8_t);
-    uint8_t padding8 = 0;
-    uint16_t padding16 = 0;
-    memcpy(buffer+offset,&padding8,sizeof(uint8_t));
-    memcpy(buffer+offset,&padding16,sizeof(uint16_t));
-    return buffer;
-
-}
-
 
 void sendfile_response(int sock_index, char *cntrl_payload, uint16_t payload_len){
     uint32_t des_ip;
@@ -73,10 +52,10 @@ void sendfile_response(int sock_index, char *cntrl_payload, uint16_t payload_len
     offset += sizeof(uint16_t);
     memcpy(file_name, cntrl_payload + offset, payload_len-8);
 
-    struct sendfile_stats *ss = (struct sendfile_stats*)malloc(sizeof(struct sendfile_stats));
-    ss->transfer_id = transfer_id;
-    ss->ttl = ttl;
-    ss->number = 0;
+    global_transfer_id = transfer_id;
+    global_ttl = ttl;
+    init_seqnum = ntohs(seqnum);
+    last_seqnum = ntohs(seqnum);
 
     /* Find next hop ip address */
     uint16_t next_hop;
@@ -104,27 +83,44 @@ void sendfile_response(int sock_index, char *cntrl_payload, uint16_t payload_len
     memset(total_payload,0,sz);
     fread(total_payload,sz,1,stream);
     fclose(stream);
-    char *header_one = create_packet_header(des_ip,transfer_id,ttl,seqnum,FIN_ONE);
-    char *header_zero = create_packet_header(des_ip,transfer_id,ttl,seqnum,FIN_ZERO);
 
     while(count * PAYLOAD_LEN < sz){
-        char *header;
+        char *header = (char*)malloc(DATA_PACKET_HEADER_OFFSET);
+        uint16_t offset = 0;
+        memcpy(header+offset,&des_ip,sizeof(uint32_t));
+        offset = offset + sizeof(uint32_t);
+        memcpy(header+offset,&transfer_id,sizeof(uint8_t));
+        offset = offset + sizeof(uint8_t);
+        memcpy(header+offset,&ttl,sizeof(uint8_t));
+        offset = offset + sizeof(uint8_t);
+
+        uint16_t nseqnum = htons(last_seqnum);
+        memcpy(header+offset,&nseqnum,sizeof(uint16_t));
+        offset = offset + sizeof(uint16_t);
+
         if((count+1) * PAYLOAD_LEN >= sz){
-            header = header_one;
+            uint8_t fin_one = 1<<7;
+            memcpy(header+offset,&fin_one,sizeof(uint8_t));
+            offset = offset + sizeof(uint8_t);
         }
         else{
-            header = header_zero;
+            uint8_t fin_zero = 0;
+            memcpy(header+offset,&fin_zero,sizeof(uint8_t));
+            offset = offset + sizeof(uint8_t);
         }
+
+        uint8_t padding8 = 0;
+        uint16_t padding16 = 0;
+        memcpy(header+offset,&padding8,sizeof(uint8_t));
+        memcpy(header+offset,&padding16,sizeof(uint16_t));
 
         sendALL(connect_socket,header,DATA_PACKET_HEADER_OFFSET);
         sendALL(connect_socket,total_payload + count*PAYLOAD_LEN,PAYLOAD_LEN);
 
-        ss->seqnum[ss->number] = seqnum;
-        ss->number++;
+        last_seqnum = init_seqnum + count;
         count++;
-        seqnum = htons(ntohs(seqnum)+1);
+        free(header);
     }
-    LIST_INSERT_HEAD(&sendfile_stats_list, ss, next);
     close(connect_socket);
 
     /* Send control response */
@@ -136,7 +132,6 @@ void sendfile_response(int sock_index, char *cntrl_payload, uint16_t payload_len
     memcpy(sendfile_response,sendfile_header,CNTRL_RESP_HEADER_SIZE);
     sendALL(sock_index, sendfile_response, CNTRL_RESP_HEADER_SIZE + payload_length);
 
-    free(ss);
     free(total_payload);
     free(sendfile_response);
 }

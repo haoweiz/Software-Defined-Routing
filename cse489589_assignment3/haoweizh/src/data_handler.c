@@ -20,41 +20,24 @@ bool isData(int sock_index){
     return FALSE;
 }
 
-bool hastid(uint8_t transfer_id){
-    bool hastid = FALSE;
-    struct sendfile_stats *ss;
-    LIST_FOREACH(ss,&sendfile_stats_list,next){
-        if(ss->transfer_id == transfer_id)
-            hastid = TRUE;
-    }
-    return hastid;
-}
-
 
 void update_sendfile_stats_list(uint8_t transfer_id,uint16_t sequencenum,uint32_t next_hop_ip,uint8_t ttl){
-    if(hastid(transfer_id) == FALSE){
+    if(send_finish == TRUE){
         /* First time to receive packet. */
-        struct sendfile_stats *newss = (struct sendfile_stats*)malloc(sizeof(struct sendfile_stats));
-        newss->transfer_id = transfer_id;
-        newss->ttl = ttl-1;
-        newss->number = 1;
-        newss->seqnum[0] = sequencenum;
-        newss->buffer = (char*)malloc(PAYLOAD_LEN*PAYLOAD_LEN*10);
-        memset(newss->buffer,0,PAYLOAD_LEN*PAYLOAD_LEN*10);
-        LIST_INSERT_HEAD(&sendfile_stats_list, newss, next);
+        global_transfer_id = transfer_id;
+        global_ttl = ttl-1;
+        init_seqnum = sequencenum;
+        last_seqnum = sequencenum;
+        buffer = (char*)malloc(PAYLOAD_LEN*PAYLOAD_LEN*10);
+        memset(buffer,0,PAYLOAD_LEN*PAYLOAD_LEN*10);
+        send_finish = FALSE;
 
         if(next_hop_ip != this_router_ip)
             connect_socket = connect_destinate(next_hop_ip);
     }
     else{
         /* Already receive some packet from transfer id. */
-        struct sendfile_stats *oldss;
-        LIST_FOREACH(oldss,&sendfile_stats_list,next){
-            if(oldss->transfer_id == transfer_id){
-                oldss->seqnum[oldss->number] = sequencenum;
-                oldss->number++;
-            }
-        }
+        last_seqnum++;
     }
 }
 
@@ -100,15 +83,19 @@ bool data_recv_file(int sock_index){
     memcpy(&ttl,receive_packet + TTL_OFFSET,sizeof(uint8_t));
     memcpy(&seqencenum,receive_packet + SEQ_OFFSET,sizeof(uint16_t));
     memcpy(&fin,receive_packet + FIN_OFFSET,sizeof(uint8_t));
+    global_ttl = ttl-1;
 
     memcpy(panultimate_data_packet,last_data_packet,DATA_PACKET_HEADER_OFFSET + PAYLOAD_LEN);
     memcpy(last_data_packet,receive_packet,DATA_PACKET_HEADER_OFFSET + PAYLOAD_LEN);
 
-    if(candrop(transfer_id) == TRUE)
-        return FALSE;
+    if(candrop(ttl) == TRUE){
+        free(receive_packet);
+        free(receive_payload);
+        return TRUE;
+    }
 
     uint32_t next_hop_ip = get_next_hop_ip(des_ip);
-    update_sendfile_stats_list(transfer_id,seqencenum,next_hop_ip,ttl);
+    update_sendfile_stats_list(transfer_id,ntohs(seqencenum),next_hop_ip,ttl);
 
     if(this_router_ip == next_hop_ip){
         /* Receive this packet */
@@ -119,35 +106,28 @@ bool data_recv_file(int sock_index){
             sprintf(filename,"file-%d",transfer_id);
             FILE *stream = fopen(filename,"w");
 
-            struct sendfile_stats *ss;
-            LIST_FOREACH(ss,&sendfile_stats_list,next){
-                if(ss->transfer_id == transfer_id){
-                    memcpy(ss->buffer+(ss->number-1)*PAYLOAD_LEN,receive_payload,PAYLOAD_LEN);
-                    fwrite(ss->buffer,(ss->number)*PAYLOAD_LEN,1,stream);
-                    free(ss->buffer);
-                    LIST_REMOVE(ss,next);
-                }
-            }
+            memcpy(buffer+(last_seqnum - init_seqnum)*PAYLOAD_LEN,receive_payload,PAYLOAD_LEN);
+            fwrite(buffer,(last_seqnum - init_seqnum + 1)*PAYLOAD_LEN,1,stream);
+            free(buffer);
+
             FD_CLR(sock_index, &master_list);
             fclose(stream);
             free(filename);
+            send_finish = TRUE;
         }
         else{
-            struct sendfile_stats *ss;
-            LIST_FOREACH(ss,&sendfile_stats_list,next){
-                if(ss->transfer_id == transfer_id){
-                    memcpy(ss->buffer+(ss->number-1)*PAYLOAD_LEN,receive_payload,PAYLOAD_LEN);
-                }
-            }
+            memcpy(buffer+(last_seqnum - init_seqnum)*PAYLOAD_LEN,receive_payload,PAYLOAD_LEN);
         }
     }
     else{
         /* Transfer to other routers */
-        memcpy(receive_packet + TTL_OFFSET,&ttl,sizeof(uint8_t));
+        uint8_t newttl = ttl-1;
+        memcpy(receive_packet + TTL_OFFSET,&newttl,sizeof(uint8_t));
         sendALL(connect_socket,receive_packet,DATA_PACKET_HEADER_OFFSET + PAYLOAD_LEN);
         if(fin == FIN_ONE){
             close(connect_socket);
             FD_CLR(sock_index,&master_list);
+            send_finish = TRUE;
         }
     }
     free(receive_packet);

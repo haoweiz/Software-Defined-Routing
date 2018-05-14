@@ -38,6 +38,7 @@ int head_fd;
 struct timeval timeout;
 char *last_data_packet;
 char *panultimate_data_packet;
+bool send_finish;
 
 void main_loop()
 {
@@ -105,6 +106,7 @@ void main_loop()
 
 void init()
 {
+    send_finish = TRUE;
     control_socket = create_control_sock();
 
     //router_socket and data_socket will be initialized after INIT from controller

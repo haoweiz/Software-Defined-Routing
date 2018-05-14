@@ -1,4 +1,4 @@
-./grader_controller -c ./grader.cfg -d /home/csgrad/haoweizh/cse489589_assignment3/haoweizh/grader_staging -s ../haoweizh_pa3.tar -ctrl ../controller/controller -t init
+./grader_controller -c ./grader.cfg -d /home/csgrad/haoweizh/cse489589_assignment3/haoweizh/grader_staging -s ../haoweizh_pa3.tar -ctrl ../controller/controller -t data
 
 scp * haoweizh@128.205.36.34://home/csgrad/haoweizh/cse489589_assignment3/haoweizh/src
 
@@ -6,9 +6,6 @@ scp * haoweizh@128.205.36.34://home/csgrad/haoweizh/cse489589_assignment3/haowei
 
 netstat -tlnp|grep "port_number"
 
-0|3|7|2|11|
-3|0|4|1|10|
-65535|65535|65535|65535|65535|
-2|1|5|0|9|
-65535|65535|65535|65535|65535|
+./controller -t example.topology -f 11 12 3 10 20 test.txt
+
 
