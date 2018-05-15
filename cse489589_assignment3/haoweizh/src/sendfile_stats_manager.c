@@ -31,7 +31,7 @@ void sendfile_stats_response(int sock_index, char *cntrl_payload, uint16_t paylo
 
         uint16_t begin = init_seqnum;
         uint16_t end = last_seqnum;
-        printf("ttl = %d\n",global_ttl);
+        printf("ttl = %d\n",global_ttl); 
         printf("init_seqnum = %d\n",init_seqnum);
         printf("last_seqnum = %d\n",last_seqnum);
         while(begin <= end){
